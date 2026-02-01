@@ -1,4 +1,4 @@
-# regecons-flutter
+# regcons-flutter
 Regecons 🏗️
 Una aplicación móvil diseñada para el sector de la construcción. Regecons permite la gestión de avances físicos y reportes de seguridad directamente desde la obra, garantizando la continuidad operativa incluso en zonas sin acceso a internet.
 
