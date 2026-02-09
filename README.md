@@ -1,16 +1,46 @@
-# regcons-flutter
-Regecons 🏗️
-Una aplicación móvil diseñada para el sector de la construcción. Regecons permite la gestión de avances físicos y reportes de seguridad directamente desde la obra, garantizando la continuidad operativa incluso en zonas sin acceso a internet.
+# REGCONS 🏗️
+**Gestión Inteligente para el Sector de la Construcción**
 
-Versión del Proyecto: Flutter 2.0 (MVP)
+[![Version](https://img.shields.io/badge/Release-v1.0.0--mvp-orange?style=for-the-badge&logo=github)](https://github.com/SaladDann/regcons_flutter/releases/tag/v1.0.0-mvp)
+[![Platform](https://img.shields.io/badge/Platform-Android-green?style=for-the-badge&logo=android)](https://github.com/SaladDann/regcons_flutter/releases/tag/v1.0.0-mvp)
 
-📋 Características
-✨ Registro de Avance Físico: Control cuantitativo (%) y cualitativo de actividades diarias.
+REGCONS es una solución móvil diseñada para optimizar la supervisión técnica en obra. Permite el control de avances físicos y la gestión de seguridad industrial en tiempo real, garantizando la integridad de la información incluso en zonas con conectividad limitada.
 
-📸 Evidencia Fotográfica: Captura de fotos vinculadas a reportes de avance e incidentes.
+---
 
-⚠️ Gestión de Seguridad: Reporte inmediato de riesgos y condiciones inseguras en campo.
 
-📶 Modo Offline: Persistencia de datos local con sincronización diferida automática.
+## 📋 Características Principales
 
-📊 Reportes Semanales: Consolidación de datos para supervisión técnica y administrativa.
+* 📸 **Evidencia Fotográfica:** Captura de imágenes vinculadas directamente a reportes y avances.
+* ⚠️ **Gestión de Seguridad:** Reporte de incidentes y condiciones inseguras con niveles de severidad.
+* 📶 **Arquitectura Offline-First:** Persistencia local mediante SQLite para trabajo en campo sin internet.
+* 👥 **Multi-Cuenta:** Selector de perfiles integrado para alternar entre diferentes usuarios rápidamente.
+
+---
+
+## 🛠️ Stack Tecnológico
+* **Framework:** Flutter 3.x (Dart)
+* **Base de Datos:** SQLite (sqflite)
+* **Estado & Persistencia:** SharedPreferences
+* **Seguridad:** Encriptación SHA-256 + Salt dinámico
+
+---
+
+## 🧑‍💻 Instalación para Desarrolladores
+Si deseas clonar el proyecto y ejecutarlo en tu entorno local:
+
+1.  **Clonar repositorio:**
+    `git clone https://github.com/SaladDann/regcons_flutter.git`
+2.  **Instalar dependencias:**
+    `flutter pub get`
+3.  **Ejecutar:**
+    `flutter run`
+    
+    ## 📲 Descarga Directa
+Para probar el MVP en tu dispositivo Android, haz clic en el siguiente botón:
+
+[<img src="https://img.shields.io/badge/Descargar_APK-Directo-orange?style=for-the-badge&logo=android&logoColor=white" width="200">](https://github.com/SaladDann/regcons_flutter/releases/download/v1.0.0-mvp/app-arm64-v8a-release.apk).
+
+*(Requiere Android 7.0 o superior)*
+
+---
