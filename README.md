@@ -8,14 +8,6 @@ REGCONS es una solución móvil diseñada para optimizar la supervisión técnic
 
 ---
 
-## 📲 Descarga
-Para probar el MVP en tu dispositivo Android, haz clic en el siguiente botón:
-
-[<img src="https://img.shields.io/badge/Descargar_APK-Directo-orange?style=for-the-badge&logo=android&logoColor=white" width="200">](https://github.com/SaladDann/regcons_flutter/releases/tag/v1.0.0-mvp)
-
-*(Requiere Android 7.0 o superior)*
-
----
 
 ## 📋 Características Principales
 
