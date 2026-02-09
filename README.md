@@ -19,7 +19,6 @@ Para probar el MVP en tu dispositivo Android, haz clic en el siguiente botón:
 
 ## 📋 Características Principales
 
-* ✨ **Registro de Avance Físico:** Control cuantitativo (%) y cualitativo detallado por actividad.
 * 📸 **Evidencia Fotográfica:** Captura de imágenes vinculadas directamente a reportes y avances.
 * ⚠️ **Gestión de Seguridad:** Reporte de incidentes y condiciones inseguras con niveles de severidad.
 * 📶 **Arquitectura Offline-First:** Persistencia local mediante SQLite para trabajo en campo sin internet.
