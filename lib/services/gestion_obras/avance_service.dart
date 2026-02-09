@@ -9,6 +9,7 @@ class AvanceService {
   late ActividadDao _actividadDao;
   bool _inicializado = false;
 
+  /// Inicializa los DAOs necesarios para la gestión de avances
   Future<void> _initialize() async {
     if (!_inicializado) {
       final db = await AppDatabase().database;
@@ -18,7 +19,7 @@ class AvanceService {
     }
   }
 
-  // CREAR un nuevo avance
+  /// Registra un nuevo avance de obra validando la existencia de la actividad asociada
   Future<Avance> crearAvance({
     required int idActividad,
     required int idObra,
@@ -31,9 +32,7 @@ class AvanceService {
     await _initialize();
 
     final actividad = await _actividadDao.getById(idActividad);
-    if (actividad == null) {
-      throw Exception('La actividad no existe');
-    }
+    if (actividad == null) throw Exception('La actividad no existe');
 
     final nuevoAvance = Avance(
       idActividad: idActividad,
@@ -48,12 +47,10 @@ class AvanceService {
 
     final id = await _avanceDao.insert(nuevoAvance);
     nuevoAvance.idAvance = id;
-
     return nuevoAvance;
   }
 
-
-  // ACTUALIZAR un avance existente
+  /// Actualiza los datos de un avance existente en la base de datos
   Future<Avance> actualizarAvance(Avance avance) async {
     await _initialize();
     if (avance.idAvance == null) throw Exception('El avance no tiene ID');
@@ -61,7 +58,7 @@ class AvanceService {
     return avance;
   }
 
-  // ELIMINAR un avance
+  /// Elimina un registro de avance de forma permanente
   Future<void> eliminarAvance(int idAvance) async {
     await _initialize();
     final avance = await _avanceDao.getById(idAvance);
@@ -69,76 +66,75 @@ class AvanceService {
     await _avanceDao.delete(idAvance);
   }
 
-  // OBTENER avances por actividad
+  /// Recupera el historial de avances vinculado a una actividad específica
   Future<List<Avance>> obtenerAvancesPorActividad(int idActividad) async {
     await _initialize();
     return await _avanceDao.getByActividad(idActividad);
   }
 
-
-  // OBTENER avances por obra
+  /// Obtiene todos los avances registrados para una obra completa
   Future<List<Avance>> obtenerAvancesPorObra(int idObra) async {
     await _initialize();
     return await _avanceDao.getByObra(idObra);
   }
 
-  // OBTENER avances por rango de fechas
+  /// Filtra los avances registrados dentro de un rango de fechas determinado
   Future<List<Avance>> obtenerAvancesPorFechaRange(DateTime inicio, DateTime fin) async {
     await _initialize();
     return await _avanceDao.getByFechaRange(inicio, fin);
   }
 
-  // OBTENER último avance de una actividad
+  /// Retorna el último registro de avance cargado para una actividad
   Future<Avance?> obtenerUltimoAvance(int idActividad) async {
     await _initialize();
     return await _avanceDao.getUltimoByActividad(idActividad);
   }
 
-  // CAMBIAR estado de un avance
+  /// Actualiza el estado del avance validando contra el flujo permitido por el sistema
   Future<void> cambiarEstadoAvance(int idAvance, String nuevoEstado) async {
     await _initialize();
-    final estadosValidos = ['REGISTRADO', 'EN_PROCESO', 'FINALIZADO', 'CANCELADO'];
+    const estadosValidos = ['REGISTRADO', 'EN_PROCESO', 'FINALIZADO', 'CANCELADO'];
     if (!estadosValidos.contains(nuevoEstado)) throw Exception('Estado no válido: $nuevoEstado');
     await _avanceDao.updateEstado(idAvance, nuevoEstado);
   }
 
-  // CONTAR avances por actividad
+  /// Devuelve el conteo total de avances para una actividad
   Future<int> contarAvancesPorActividad(int idActividad) async {
     await _initialize();
     return await _avanceDao.countByActividad(idActividad);
   }
 
-  // CONTAR avances por obra
+  /// Devuelve el conteo total de avances para una obra
   Future<int> contarAvancesPorObra(int idObra) async {
     await _initialize();
     return await _avanceDao.countByObra(idObra);
   }
 
-  // SUMAR horas trabajadas por actividad
+  /// Calcula el acumulado de horas hombre trabajadas en una actividad
   Future<double> sumarHorasPorActividad(int idActividad) async {
     await _initialize();
     return await _avanceDao.sumHorasByActividad(idActividad);
   }
 
-  // ELIMINAR todos los avances de una actividad
+  /// Elimina masivamente todos los registros de avance de una actividad
   Future<void> eliminarAvancesPorActividad(int idActividad) async {
     await _initialize();
     await _avanceDao.deleteByActividad(idActividad);
   }
 
-  // BUSCAR avances por texto
+  /// Realiza una búsqueda de avances basada en coincidencias de texto
   Future<List<Avance>> buscarAvances(String query) async {
     await _initialize();
     return await _avanceDao.search(query);
   }
 
-  // OBTENER estadísticas generales de avances
+  /// Genera un mapa con métricas y estadísticas globales de los avances registrados
   Future<Map<String, dynamic>> obtenerEstadisticas() async {
     await _initialize();
     return await _avanceDao.getEstadisticas();
   }
 
-  // OBTENER resumen de actividad (actividad + avances)
+  /// Genera un resumen consolidado de una actividad incluyendo sus avances y horas totales
   Future<Map<String, dynamic>> obtenerResumenActividad(int idActividad) async {
     await _initialize();
 
@@ -146,11 +142,7 @@ class AvanceService {
     if (actividad == null) throw Exception('La actividad no existe');
 
     final avances = await _avanceDao.getByActividad(idActividad);
-
-    final totalHoras = avances.fold<double>(
-      0,
-          (sum, a) => sum + (a.horasTrabajadas ?? 0),
-    );
+    final totalHoras = avances.fold<double>(0, (sum, a) => sum + (a.horasTrabajadas ?? 0));
 
     return {
       'actividad': actividad,
@@ -160,7 +152,7 @@ class AvanceService {
     };
   }
 
-  // GENERAR reporte de avances
+  /// Crea un informe de avances filtrado por obra o fechas con cálculo de horas totales
   Future<Map<String, dynamic>> generarReporteAvances({
     int? idObra,
     DateTime? fechaInicio,
@@ -169,7 +161,6 @@ class AvanceService {
     await _initialize();
 
     List<Avance> avances;
-
     if (idObra != null) {
       avances = await _avanceDao.getByObra(idObra);
     } else if (fechaInicio != null && fechaFin != null) {
@@ -178,10 +169,7 @@ class AvanceService {
       avances = await _avanceDao.getAll();
     }
 
-    double totalHoras = avances.fold(
-      0,
-          (sum, a) => sum + (a.horasTrabajadas ?? 0),
-    );
+    final totalHoras = avances.fold<double>(0, (sum, a) => sum + (a.horasTrabajadas ?? 0));
 
     return {
       'total_avances': avances.length,
@@ -193,24 +181,21 @@ class AvanceService {
     };
   }
 
-// CALCULAR avance semanal por obra
+  /// Calcula el rendimiento porcentual de avances registrados en los últimos 7 días
   Future<double> calcularAvanceSemanal(int idObra) async {
     await _initialize();
 
     final hoy = DateTime.now();
     final hace7Dias = hoy.subtract(const Duration(days: 7));
-
     final avances = await obtenerAvancesPorObra(idObra);
 
     final avancesSemana = avances.where((a) =>
     a.fecha.isAfter(hace7Dias) && a.fecha.isBefore(hoy)
     ).toList();
 
-    if (avancesSemana.isEmpty) return 0.0;
-
+    if (avances.isEmpty) return 0.0;
     return (avancesSemana.length / avances.length) * 100;
   }
-
 }
 
 

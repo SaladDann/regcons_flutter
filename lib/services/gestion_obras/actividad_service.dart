@@ -10,6 +10,7 @@ class ActividadService {
   late ObraDao _obraDao;
   bool _inicializado = false;
 
+  /// Inicializa los DAOs necesarios asegurando una única conexión a la base de datos
   Future<void> _initialize() async {
     if (!_inicializado) {
       final db = await AppDatabase().database;
@@ -20,7 +21,7 @@ class ActividadService {
     }
   }
 
-  // CREAR actividad
+  /// Registra una nueva actividad vinculada a una obra tras verificar la existencia de esta última
   Future<Actividad> crearActividad({
     required int idObra,
     required String nombre,
@@ -28,6 +29,7 @@ class ActividadService {
     required String estado,
   }) async {
     await _initialize();
+
     final obra = await _obraDao.getById(idObra);
     if (obra == null) throw Exception('La obra no existe');
 
@@ -43,8 +45,7 @@ class ActividadService {
     return nuevaActividad;
   }
 
-
-  // ACTUALIZAR actividad
+  /// Actualiza los datos de una actividad validando su integridad previa persistencia
   Future<Actividad> actualizarActividad(Actividad actividad) async {
     await _initialize();
     if (actividad.idActividad == null) throw Exception('La actividad no tiene ID');
@@ -56,9 +57,10 @@ class ActividadService {
     return actividad;
   }
 
-  // ELIMINAR actividad
+  /// Elimina una actividad y todos sus registros de avance asociados (cascada lógica)
   Future<void> eliminarActividad(int idActividad) async {
     await _initialize();
+
     final actividad = await _actividadDao.getById(idActividad);
     if (actividad == null) throw Exception('La actividad no existe');
 
@@ -66,17 +68,16 @@ class ActividadService {
     await _actividadDao.delete(idActividad);
   }
 
-  // OBTENER actividades por obra
+  /// Recupera el listado completo de actividades pertenecientes a una obra específica
   Future<List<Actividad>> obtenerActividadesPorObra(int idObra) async {
     await _initialize();
     return await _actividadDao.getByObra(idObra);
   }
 
-  // CAMBIAR estado de una actividad
+  /// Modifica el estado de una actividad validando el flujo permitido (PENDIENTE, EN_PROGRESO, FINALIZADA)
   Future<void> cambiarEstadoActividad(int idActividad, String nuevoEstado) async {
     await _initialize();
 
-    // Estados válidos ajustados al modal
     const estadosValidos = ['PENDIENTE', 'EN_PROGRESO', 'FINALIZADA'];
     if (!estadosValidos.contains(nuevoEstado)) {
       throw Exception('Estado no válido: $nuevoEstado');
@@ -85,28 +86,26 @@ class ActividadService {
     await _actividadDao.updateEstado(idActividad, nuevoEstado);
   }
 
-  // ESTADÍSTICAS por obra
+  /// Obtiene métricas de rendimiento y conteos generales de las actividades de una obra
   Future<Map<String, dynamic>> obtenerEstadisticasPorObra(int idObra) async {
     await _initialize();
     return await _actividadDao.getEstadisticasByObra(idObra);
   }
 
-  // OBTENER resumen completo de obra
+  /// Genera un informe consolidado que incluye actividades, estadísticas y los 5 avances más recientes
   Future<Map<String, dynamic>> obtenerResumenObra(int idObra) async {
     await _initialize();
 
     final actividades = await obtenerActividadesPorObra(idObra);
     final estadisticas = await obtenerEstadisticasPorObra(idObra);
 
-    // Tomar últimos 5 avances (opcional)
     final avancesRecientes = await _avanceDao.getByObra(idObra);
     avancesRecientes.sort((a, b) => b.fecha.compareTo(a.fecha));
-    final ultimosAvances = avancesRecientes.take(5).toList();
 
     return {
       'actividades': actividades,
       'estadisticas': estadisticas,
-      'ultimos_avances': ultimosAvances,
+      'ultimos_avances': avancesRecientes.take(5).toList(),
       'total_actividades': actividades.length,
     };
   }

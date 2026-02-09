@@ -10,45 +10,35 @@ class ReporteService {
   final AppDatabase _db = AppDatabase();
   final IncidenteDao _incidenteDao = IncidenteDao();
 
+  /// Consolida toda la información de una obra para la generación de reportes ejecutivos
   Future<ReporteObraModel> generarDataReporte(int idObra, String responsable) async {
-    // 1. Obtener la instancia de la base de datos
     final dbClient = await _db.database;
 
-    // 2. Inicializar DAOs con la conexión activa
     final obraDao = ObraDao(dbClient);
     final actividadDao = ActividadDao(dbClient);
     final avanceDao = AvanceDao(dbClient);
 
-    // 3. Obtener datos maestros de la Obra (ID, Presupuesto, Cliente)
     final obra = await obraDao.getById(idObra);
     if (obra == null) throw Exception('No se encontró la obra con ID: $idObra');
 
-    // 4. Calcular el avance físico basado en actividades finalizadas
     final porcentajeAvance = await obraDao.calcularPorcentajeAvance(idObra);
-
-    // 5. Obtener actividades y sus estadísticas
     final statsAct = await actividadDao.getEstadisticasByObra(idObra);
     final listaActividades = await actividadDao.getByObra(idObra);
-
-    // 6. Obtener Avances de Campo y sumar Horas Trabajadas (HH)
     final List<Avance> todosLosAvances = await avanceDao.getByObra(idObra);
 
-    // Suma manual de las horas registradas (aquí se capturan tus 3.0h)
-    double acumuladoHoras = 0;
-    for (var avance in todosLosAvances) {
-      acumuladoHoras += (avance.horasTrabajadas ?? 0.0);
-    }
-
-    // 7. Obtener lista completa de incidentes (Accidentes, Derrames, etc.)
-    final incidentes = await _incidenteDao.listarPorObra(idObra);
-
-    // Filtrar riesgos críticos (Severidad ALTA o CRÍTICA)
-    final riesgosCriticos = await _incidenteDao.listarConFiltros(
-      idObra: idObra,
-      severidad: 'ALTA',
+    // Cálculo eficiente de horas hombre totales
+    final acumuladoHoras = todosLosAvances.fold<double>(
+        0.0,
+            (sum, avance) => sum + (avance.horasTrabajadas ?? 0.0)
     );
 
-    // 8. Retornar el modelo listo para el PDF Service
+    final incidentes = await _incidenteDao.listarPorObra(idObra);
+
+    final riesgosCriticos = await _incidenteDao.listarConFiltros(
+      idObra: idObra,
+      severidad: 'CRITICA',
+    );
+
     return ReporteObraModel(
       obra: obra,
       porcentajeAvance: porcentajeAvance,
@@ -65,11 +55,13 @@ class ReporteService {
     );
   }
 
-  /// Calcula el avance de los últimos 7 días basado en la cantidad de registros
+  /// Determina el rendimiento de registros de avance en el último ciclo de 7 días
   double _calcularAvance7D(List<Avance> avances) {
     if (avances.isEmpty) return 0.0;
+
     final hace7Dias = DateTime.now().subtract(const Duration(days: 7));
     final recientes = avances.where((a) => a.fecha.isAfter(hace7Dias)).length;
+
     return (recientes / avances.length) * 100;
   }
 }

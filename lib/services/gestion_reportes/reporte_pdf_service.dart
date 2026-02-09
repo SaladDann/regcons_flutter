@@ -7,6 +7,7 @@ class ReportePdfService {
   final PdfColor primaryColor = PdfColor.fromInt(0xFF0D47A1);
   final PdfColor accentColor = PdfColor.fromInt(0xFFE65100);
 
+  /// Genera el documento PDF con los cambios solicitados en las tablas
   Future<void> exportarPdf(ReporteObraModel data) async {
     final pdf = pw.Document();
 
@@ -37,8 +38,9 @@ class ReportePdfService {
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
         pw.Text("REGCONS - SISTEMA DE CONTROL",
-            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: accentColor, fontSize: 12)),
-        pw.Text("Generado: ${data.fechaGeneracion.day}/${data.fechaGeneracion.month}/${data.fechaGeneracion.year}",
+            style: pw.TextStyle(color: accentColor, fontSize: 12)),
+        pw.Text(
+            "Generado: ${data.fechaGeneracion.day}/${data.fechaGeneracion.month}/${data.fechaGeneracion.year}",
             style: const pw.TextStyle(fontSize: 10)),
       ],
     );
@@ -47,15 +49,16 @@ class ReportePdfService {
   pw.Widget _buildInfoObra(ReporteObraModel data) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 10),
-      padding: const pw.EdgeInsets.all(8),
-      // CORRECCIÓN: Se usa decoration para el border
+      padding: const pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(data.obra.nombre, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.Text(data.obra.nombre, style: const pw.TextStyle(fontSize: 18)),
+          pw.SizedBox(height: 4),
           pw.Text("Cliente: ${data.obra.cliente ?? 'No especificado'}"),
           pw.Text("Estado General: ${data.obra.estado}"),
           pw.Text("Presupuesto: \$${data.obra.presupuesto?.toStringAsFixed(2) ?? '0.00'}"),
@@ -75,64 +78,66 @@ class ReportePdfService {
     );
   }
 
+  /// Tabla de actividades simplificada (sin columna de progreso)
   pw.Widget _buildSeccionActividades(ReporteObraModel data) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text("ESTADO DE ACTIVIDADES", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor)),
+        pw.Text("ESTADO DE ACTIVIDADES", style: pw.TextStyle(color: primaryColor)),
         pw.Divider(color: primaryColor),
         pw.Table.fromTextArray(
-          headers: ['Actividad', 'Estado', 'Progreso'],
-          // CORRECCIÓN: Se elimina 'const' porque PdfColors no es evaluable como constante aquí
-          headerDecoration: pw.BoxDecoration(color: PdfColors.orange100),
+          headers: ['Actividad', 'Estado'],
+          headerDecoration: const pw.BoxDecoration(color: PdfColors.orange100),
+          headerStyle: const pw.TextStyle(fontSize: 10),
+          cellStyle: const pw.TextStyle(fontSize: 9),
           data: data.actividades.map((a) => [
             a.nombre,
             a.estado,
-            "${a.porcentajeCompletado.toStringAsFixed(1)}%"
           ]).toList(),
         ),
       ],
     );
   }
 
+  /// Tabla de avances con la columna de Actividad Asociada integrada
   pw.Widget _buildSeccionAvances(ReporteObraModel data) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text("ÚLTIMOS AVANCES DE CAMPO", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+        pw.Text("ÚLTIMOS AVANCES DE CAMPO", style: const pw.TextStyle(fontSize: 11)),
+        pw.SizedBox(height: 5),
         pw.Table.fromTextArray(
-          headers: ['Fecha', 'Horas', 'Descripción del Trabajo', 'Estado'],
-          // CORRECCIÓN: Se elimina 'const'
-          headerDecoration: pw.BoxDecoration(color: PdfColors.grey200),
+          headers: ['Fecha', 'Actividad', 'Horas', 'Descripción'],
+          headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          headerStyle: const pw.TextStyle(fontSize: 10),
+          cellStyle: const pw.TextStyle(fontSize: 9),
           data: data.ultimosAvances.map((av) => [
             av.fechaFormateada,
+            av.descripcion ?? 'N/A',
             "${av.horasTrabajadas}h",
             av.descripcion ?? 'Sin descripción',
-            av.estado
           ]).toList(),
         ),
       ],
     );
   }
 
-  // SECCIÓN DE SEGURIDAD (INCIDENTES)
   pw.Widget _buildSeccionSeguridad(ReporteObraModel data) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text("REGISTRO DE SEGURIDAD Y SALUD",
-            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
+            style: pw.TextStyle(color: PdfColors.red800)),
         pw.Divider(color: PdfColors.red800),
         pw.SizedBox(height: 5),
-
-        // Lógica corregida:
         data.incidentes.isEmpty
             ? pw.Text("No se reportan incidentes críticos.",
-            style: pw.TextStyle(color: PdfColors.grey700))
+            style: const pw.TextStyle(color: PdfColors.grey700, fontSize: 10))
             : pw.Table.fromTextArray(
           headers: ['Tipo', 'Severidad', 'Descripción'],
-          headerStyle: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold),
-          headerDecoration: pw.BoxDecoration(color: PdfColors.red900),
+          headerStyle: const pw.TextStyle(color: PdfColors.white),
+          headerDecoration: const pw.BoxDecoration(color: PdfColors.red900),
+          cellStyle: const pw.TextStyle(fontSize: 9),
           data: data.incidentes.map((i) => [
             i.tipo,
             i.severidad,
@@ -146,12 +151,16 @@ class ReportePdfService {
   pw.Widget _datoCuadro(String label, String value, PdfColor color) {
     return pw.Container(
       width: 130,
-      padding: const pw.EdgeInsets.all(5),
-      decoration: const pw.BoxDecoration(color: PdfColors.grey50),
+      padding: const pw.EdgeInsets.all(8),
+      decoration: const pw.BoxDecoration(
+        color: PdfColors.grey50,
+        borderRadius: pw.BorderRadius.all(pw.Radius.circular(4)),
+      ),
       child: pw.Column(
         children: [
           pw.Text(label, style: const pw.TextStyle(fontSize: 8)),
-          pw.Text(value, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: color)),
+          pw.SizedBox(height: 4),
+          pw.Text(value, style: pw.TextStyle(fontSize: 14, color: color)),
         ],
       ),
     );

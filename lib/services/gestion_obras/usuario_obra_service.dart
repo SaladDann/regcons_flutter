@@ -6,6 +6,7 @@ class UsuarioObraService {
   late UsuarioObraDao _usuarioObraDao;
   bool _inicializado = false;
 
+  /// Inicializa el DAO de relación Usuario-Obra asegurando la conexión a la base de datos
   Future<void> _initialize() async {
     if (!_inicializado) {
       final db = await AppDatabase().database;
@@ -14,7 +15,7 @@ class UsuarioObraService {
     }
   }
 
-  // ASIGNAR usuario a obra
+  /// Crea un vínculo de acceso entre un usuario específico y una obra
   Future<void> asignarUsuarioAObra(int idUsuario, int idObra) async {
     await _initialize();
     await _usuarioObraDao.insert(UsuarioObra(
@@ -23,34 +24,33 @@ class UsuarioObraService {
     ));
   }
 
-  // ELIMINAR asignación de usuario a obra
+  /// Remueve el permiso de acceso de un usuario a una obra determinada
   Future<void> eliminarAsignacionUsuarioObra(int idUsuario, int idObra) async {
     await _initialize();
     await _usuarioObraDao.delete(idUsuario, idObra);
   }
 
-  // OBTENER gestion_obras de un usuario
+  /// Recupera los identificadores de todas las obras a las que el usuario tiene acceso
   Future<List<int>> obtenerObrasDeUsuario(int idUsuario) async {
     await _initialize();
     return await _usuarioObraDao.getObrasByUsuario(idUsuario);
   }
 
-  // OBTENER usuarios de una obra
+  /// Recupera los identificadores de todos los usuarios asignados a una obra
   Future<List<int>> obtenerUsuariosDeObra(int idObra) async {
     await _initialize();
     return await _usuarioObraDao.getUsuariosByObra(idObra);
   }
 
-  // VERIFICAR acceso de usuario a obra
+  /// Verifica de forma rápida si un usuario posee permisos de entrada en una obra
   Future<bool> tieneAccesoAObra(int idUsuario, int idObra) async {
     await _initialize();
     return await _usuarioObraDao.tieneAcceso(idUsuario, idObra);
   }
 
-  // ASIGNAR múltiples usuarios a una obra
+  /// Registra masivamente el acceso de múltiples usuarios a una sola obra
   Future<void> asignarUsuariosAObra(List<int> idsUsuarios, int idObra) async {
     await _initialize();
-
     for (var idUsuario in idsUsuarios) {
       await _usuarioObraDao.insert(UsuarioObra(
         idUsuario: idUsuario,
@@ -59,31 +59,29 @@ class UsuarioObraService {
     }
   }
 
-  // ELIMINAR todos los usuarios de una obra
+  /// Limpia todos los registros de acceso vinculados a una obra (borrado masivo)
   Future<void> eliminarTodosUsuariosDeObra(int idObra) async {
     await _initialize();
     await _usuarioObraDao.deleteByObra(idObra);
   }
 
-  // ELIMINAR todas las gestion_obras de un usuario
+  /// Revoca el acceso de un usuario a todos los proyectos en los que estaba asignado
   Future<void> eliminarTodasObrasDeUsuario(int idUsuario) async {
     await _initialize();
     await _usuarioObraDao.deleteByUsuario(idUsuario);
   }
 
-  // OBTENER gestion_obras accesibles con filtro
+  /// Obtiene obras permitidas para un usuario con posibilidad de excluir IDs específicos
   Future<List<int>> obtenerObrasAccesibles(
       int idUsuario, {
         List<int>? excludeObras,
       }) async {
     await _initialize();
-
     final todasObras = await _usuarioObraDao.getObrasByUsuario(idUsuario);
 
     if (excludeObras != null) {
-      return todasObras.where((obra) => !excludeObras.contains(obra)).toList();
+      return todasObras.where((id) => !excludeObras.contains(id)).toList();
     }
-
     return todasObras;
   }
 }

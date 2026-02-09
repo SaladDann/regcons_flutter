@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+/// Representa un registro de progreso diario o específico para una actividad en obra.
+/// Incluye el control de horas hombre (HH), evidencias fotográficas y estado de sincronización.
 class Avance {
   int? idAvance;
   int idObra;
@@ -11,40 +13,42 @@ class Avance {
   String estado;
   int sincronizado;
 
-  // Solo para UI (no persistente)
+  /// Porcentaje de ejecución de la actividad en este registro puntual (Solo UI).
   double porcentajeEjecutado;
+
+  /// Nombre de la actividad asociada para facilitar la visualización en reportes.
+  String? nombreActividad;
 
   Avance({
     this.idAvance,
     required this.idObra,
     required this.idActividad,
     required this.fecha,
-    this.horasTrabajadas = 0,
+    this.horasTrabajadas = 0.0,
     this.descripcion,
     this.evidenciaFoto,
     this.estado = 'REGISTRADO',
     this.sincronizado = 0,
-    this.porcentajeEjecutado = 0,
+    this.porcentajeEjecutado = 0.0,
+    this.nombreActividad,
   });
 
-  // ======================
-  // MAP <-> MODELO
-  // ======================
-
+  /// Reconstruye el Avance desde un mapa de base de datos con manejo seguro de tipos numéricos.
   factory Avance.fromMap(Map<String, dynamic> map) {
     return Avance(
-      idAvance: map['id_avance'],
-      idObra: map['id_obra'],
-      idActividad: map['id_actividad'],
-      fecha: DateTime.fromMillisecondsSinceEpoch(map['fecha']),
-      horasTrabajadas: (map['horas_trabajadas'] as num?)?.toDouble() ?? 0,
-      descripcion: map['descripcion'],
-      evidenciaFoto: map['evidencia_foto'],
-      estado: map['estado'] ?? 'REGISTRADO',
-      sincronizado: map['sincronizado'] ?? 0,
+      idAvance: map['id_avance'] as int?,
+      idObra: map['id_obra'] as int,
+      idActividad: map['id_actividad'] as int,
+      fecha: DateTime.fromMillisecondsSinceEpoch(map['fecha'] as int),
+      horasTrabajadas: (map['horas_trabajadas'] as num?)?.toDouble() ?? 0.0,
+      descripcion: map['descripcion'] as String?,
+      evidenciaFoto: map['evidencia_foto'] as String?,
+      estado: (map['estado'] as String?) ?? 'REGISTRADO',
+      sincronizado: (map['sincronizado'] as int?) ?? 0,
     );
   }
 
+  /// Serializa el modelo para persistencia local en SQLite.
   Map<String, dynamic> toMap() {
     return {
       'id_avance': idAvance,
@@ -59,18 +63,19 @@ class Avance {
     };
   }
 
-  // ======================
-  // UI / HELPERS
-  // ======================
+  // --- Utilidades de Formato y UI ---
 
-  String get fechaFormateada =>
-      '${fecha.day}/${fecha.month}/${fecha.year}';
+  /// Retorna la fecha en formato legible (DD/MM/AAAA).
+  String get fechaFormateada => '${fecha.day}/${fecha.month}/${fecha.year}';
 
+  /// Retorna la hora del registro (HH:MM).
   String get horaFormateada =>
       '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
 
+  /// Combinación de fecha y hora para encabezados de detalle.
   String get fechaHoraCompleta => '$fechaFormateada $horaFormateada';
 
+  /// Color semántico basado en el estado del registro.
   Color get estadoColor {
     switch (estado) {
       case 'FINALIZADO':
@@ -78,29 +83,31 @@ class Avance {
       case 'EN_PROCESO':
         return Colors.orange;
       case 'PENDIENTE':
-        return Colors.yellow;
+        return Colors.blueGrey;
       case 'CANCELADO':
         return Colors.red;
       default:
-        return Colors.blue; // REGISTRADO
+        return Colors.blue;
     }
   }
 
+  /// Iconografía representativa para listas de avances.
   IconData get estadoIcon {
     switch (estado) {
       case 'FINALIZADO':
-        return Icons.check_circle;
+        return Icons.task_alt;
       case 'EN_PROCESO':
-        return Icons.play_circle_fill;
+        return Icons.history_edu;
       case 'PENDIENTE':
-        return Icons.schedule;
+        return Icons.more_time;
       case 'CANCELADO':
-        return Icons.cancel;
+        return Icons.block;
       default:
-        return Icons.assignment;
+        return Icons.edit_note;
     }
   }
 
+  /// Texto descriptivo del estado para la interfaz.
   String get estadoTexto {
     switch (estado) {
       case 'FINALIZADO':
@@ -116,30 +123,21 @@ class Avance {
     }
   }
 
-  // ======================
-  // VALIDACIONES
-  // ======================
+  // --- Validaciones y Etiquetas ---
+  bool get tieneEvidencia => evidenciaFoto != null && evidenciaFoto!.isNotEmpty;
 
-  bool get tieneEvidencia =>
-      evidenciaFoto != null && evidenciaFoto!.isNotEmpty;
+  bool get tieneDescripcion => descripcion != null && descripcion!.trim().isNotEmpty;
 
-  bool get tieneDescripcion =>
-      descripcion != null && descripcion!.isNotEmpty;
+  bool get tieneHorasTrabajadas => (horasTrabajadas ?? 0) > 0;
 
-  bool get tieneHorasTrabajadas => horasTrabajadas! > 0;
+  String get porcentajeTexto => '${porcentajeEjecutado.toStringAsFixed(1)}%';
 
-  String get porcentajeTexto =>
-      '${porcentajeEjecutado.toStringAsFixed(1)}%';
+  String? get horasTexto => (horasTrabajadas ?? 0) > 0
+      ? '${horasTrabajadas!.toStringAsFixed(1)} h'
+      : null;
 
-  String? get horasTexto =>
-      horasTrabajadas! > 0
-          ? '${horasTrabajadas?.toStringAsFixed(1)} horas'
-          : null;
-
-  // ======================
-  // COPY
-  // ======================
-
+  // --- Operaciones de Modelo ---
+  /// Genera una copia del objeto para cambios inmutables.
   Avance copyWith({
     int? idAvance,
     int? idObra,
@@ -151,6 +149,7 @@ class Avance {
     String? estado,
     int? sincronizado,
     double? porcentajeEjecutado,
+    String? nombreActividad,
   }) {
     return Avance(
       idAvance: idAvance ?? this.idAvance,
@@ -162,8 +161,8 @@ class Avance {
       evidenciaFoto: evidenciaFoto ?? this.evidenciaFoto,
       estado: estado ?? this.estado,
       sincronizado: sincronizado ?? this.sincronizado,
-      porcentajeEjecutado:
-      porcentajeEjecutado ?? this.porcentajeEjecutado,
+      porcentajeEjecutado: porcentajeEjecutado ?? this.porcentajeEjecutado,
+      nombreActividad: nombreActividad ?? this.nombreActividad,
     );
   }
 }

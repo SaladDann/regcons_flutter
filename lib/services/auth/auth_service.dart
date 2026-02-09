@@ -10,6 +10,7 @@ class AuthService {
   late SesionDao _sesionDao;
   bool _inicializado = false;
 
+  /// Inicializa los DAOs y la conexión a la base de datos de forma perezosa
   Future<void> _initialize() async {
     if (!_inicializado) {
       final db = await AppDatabase().database;
@@ -19,6 +20,7 @@ class AuthService {
     }
   }
 
+  /// Autentica al usuario, verifica su estado y genera una nueva sesión activa de 7 días
   Future<Usuario?> login(String username, String password) async {
     await _initialize();
 
@@ -34,29 +36,26 @@ class AuthService {
       usuario.passwordSalt,
     );
 
-    if (!isValid) {
-      return null;
-    }
+    if (!isValid) return null;
 
     await _sesionDao.invalidateAllUserSessions(usuario.idUsuario!);
 
     final token = PasswordHasher.generateSessionToken();
     final now = DateTime.now();
-    final expiracion = now.add(const Duration(days: 7));
 
     final nuevaSesion = Sesion(
       idUsuario: usuario.idUsuario!,
       token: token,
       fechaCreacion: now,
-      fechaExpiracion: expiracion,
+      fechaExpiracion: now.add(const Duration(days: 7)),
       activa: true,
     );
 
     await _sesionDao.insert(nuevaSesion);
-
     return usuario;
   }
 
+  /// Limpia sesiones caducadas y verifica si existe alguna sesión marcada como activa
   Future<bool> verificarSesionActiva() async {
     await _initialize();
     await _sesionDao.cleanExpiredSessions();
@@ -71,11 +70,13 @@ class AuthService {
     return sesionesActivas.isNotEmpty;
   }
 
+  /// Invalida todas las sesiones abiertas para el identificador de usuario proporcionado
   Future<void> logout(int userId) async {
     await _initialize();
     await _sesionDao.invalidateAllUserSessions(userId);
   }
 
+  /// Registra un nuevo usuario en el sistema validando unicidad de username, email y existencia de rol
   Future<Usuario?> registrarUsuario({
     required String username,
     required String email,
@@ -98,7 +99,6 @@ class AuthService {
 
     final db = await AppDatabase().database;
 
-    // rol
     final roles = await db.query(
       'roles',
       where: 'nombre = ?',
@@ -113,7 +113,6 @@ class AuthService {
     final salt = PasswordHasher.generateSalt();
     final hash = PasswordHasher.hashPassword(password, salt);
 
-    // Creacion de usuario
     final nuevoUsuario = Usuario(
       username: username,
       email: email,
@@ -134,6 +133,7 @@ class AuthService {
     return nuevoUsuario;
   }
 
+  /// Recupera el perfil del usuario vinculado a la última sesión activa registrada
   Future<Usuario?> getUsuarioActual() async {
     await _initialize();
 
@@ -145,9 +145,7 @@ class AuthService {
       limit: 1,
     );
 
-    if (sesiones.isEmpty) {
-      return null;
-    }
+    if (sesiones.isEmpty) return null;
 
     final idUsuario = sesiones.first['id_usuario'] as int;
     final usuarios = await db.query(
@@ -156,10 +154,40 @@ class AuthService {
       whereArgs: [idUsuario],
     );
 
-    if (usuarios.isEmpty) {
-      return null;
-    }
+    if (usuarios.isEmpty) return null;
 
     return Usuario.fromMap(usuarios.first);
+  }
+
+  /// Actualiza la contraseña de un usuario generando un nuevo salt y hash.
+  Future<bool> actualizarPassword(int idUsuario, String nuevaPassword) async {
+    await _initialize();
+    try {
+
+      final nuevoSalt = PasswordHasher.generateSalt();
+      final nuevoHash = PasswordHasher.hashPassword(nuevaPassword, nuevoSalt);
+
+      final db = await AppDatabase().database;
+
+      int filasAfectadas = await db.update(
+        'usuarios',
+        {
+          'password_hash': nuevoHash,
+          'password_salt': nuevoSalt,
+          'fecha_ultimo_cambio_password': DateTime.now().millisecondsSinceEpoch,
+        },
+        where: 'id_usuario = ?',
+        whereArgs: [idUsuario],
+      );
+
+      if (filasAfectadas > 0) {
+        await _sesionDao.invalidateAllUserSessions(idUsuario);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print("Error al actualizar contraseña: $e");
+      return false;
+    }
   }
 }

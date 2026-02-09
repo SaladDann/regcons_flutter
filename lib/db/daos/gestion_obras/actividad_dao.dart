@@ -1,17 +1,19 @@
 import 'package:sqflite/sqflite.dart';
 import '../../../models/gestion_obras/actividad.dart';
 
+/// Data Access Object para la gestión de tareas y cronogramas de obra.
+/// Centraliza la persistencia de actividades y el cálculo de métricas de progreso.
 class ActividadDao {
   final Database db;
 
   ActividadDao(this.db);
 
-  // INSERTAR una nueva actividad
+  /// Registra una nueva actividad en el cronograma
   Future<int> insert(Actividad actividad) async {
     return await db.insert('actividades', actividad.toMap());
   }
 
-  // ACTUALIZAR una actividad existente
+  /// Actualiza los metadatos de una actividad existente
   Future<int> update(Actividad actividad) async {
     return await db.update(
       'actividades',
@@ -21,7 +23,7 @@ class ActividadDao {
     );
   }
 
-  // ELIMINAR una actividad por ID
+  /// Elimina una actividad del registro local
   Future<int> delete(int idActividad) async {
     return await db.delete(
       'actividades',
@@ -30,57 +32,44 @@ class ActividadDao {
     );
   }
 
-  // OBTENER todas las actividades
+  /// Recupera el listado completo de actividades registradas
   Future<List<Actividad>> getAll() async {
-    final List<Map<String, dynamic>> maps = await db.query('actividades');
-    return List.generate(maps.length, (i) => Actividad.fromMap(maps[i]));
+    final maps = await db.query('actividades');
+    return maps.map((m) => Actividad.fromMap(m)).toList();
   }
 
-  // OBTENER actividad por ID
+  /// Busca una actividad específica por su ID primario
   Future<Actividad?> getById(int idActividad) async {
-    final List<Map<String, dynamic>> maps = await db.query(
+    final maps = await db.query(
       'actividades',
       where: 'id_actividad = ?',
       whereArgs: [idActividad],
     );
-    if (maps.isNotEmpty) {
-      return Actividad.fromMap(maps.first);
-    }
-    return null;
+    return maps.isNotEmpty ? Actividad.fromMap(maps.first) : null;
   }
 
-  // OBTENER actividades por obra
+  /// Obtiene las actividades vinculadas a un proyecto de obra específico
   Future<List<Actividad>> getByObra(int idObra) async {
-    final List<Map<String, dynamic>> maps = await db.query(
+    final maps = await db.query(
       'actividades',
       where: 'id_obra = ?',
       whereArgs: [idObra],
     );
-    return List.generate(maps.length, (i) => Actividad.fromMap(maps[i]));
+    return maps.map((m) => Actividad.fromMap(m)).toList();
   }
 
-  // OBTENER actividades por estado
+  /// Filtra actividades por su estado operativo (PENDIENTE, EN_PROGRESO, etc.)
   Future<List<Actividad>> getByEstado(String estado) async {
-    final List<Map<String, dynamic>> maps = await db.query(
+    final maps = await db.query(
       'actividades',
       where: 'estado = ?',
       whereArgs: [estado],
       orderBy: 'id_obra',
     );
-    return List.generate(maps.length, (i) => Actividad.fromMap(maps[i]));
+    return maps.map((m) => Actividad.fromMap(m)).toList();
   }
 
-  // OBTENER actividades por obra y estado
-  Future<List<Actividad>> getByObraAndEstado(int idObra, String estado) async {
-    final List<Map<String, dynamic>> maps = await db.query(
-      'actividades',
-      where: 'id_obra = ? AND estado = ?',
-      whereArgs: [idObra, estado],
-    );
-    return List.generate(maps.length, (i) => Actividad.fromMap(maps[i]));
-  }
-
-  // CONTAR actividades por obra
+  /// Conteo rápido de actividades asociadas a una obra
   Future<int> countByObra(int idObra) async {
     final result = await db.rawQuery(
       'SELECT COUNT(*) FROM actividades WHERE id_obra = ?',
@@ -89,16 +78,7 @@ class ActividadDao {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  // CONTAR actividades por estado
-  Future<int> countByEstado(String estado) async {
-    final result = await db.rawQuery(
-      'SELECT COUNT(*) FROM actividades WHERE estado = ?',
-      [estado],
-    );
-    return Sqflite.firstIntValue(result) ?? 0;
-  }
-
-  // ACTUALIZAR estado de una actividad
+  /// Actualiza exclusivamente el flujo de estado de una tarea
   Future<int> updateEstado(int idActividad, String estado) async {
     return await db.update(
       'actividades',
@@ -108,70 +88,36 @@ class ActividadDao {
     );
   }
 
-  // BUSCAR actividades por nombre o descripción
-  Future<List<Actividad>> search(String query) async {
-    final searchTerm = '%$query%';
-    final List<Map<String, dynamic>> maps = await db.rawQuery('''
-      SELECT * FROM actividades 
-      WHERE nombre LIKE ? 
-      OR descripcion LIKE ?
-      ORDER BY id_obra
-    ''', [searchTerm, searchTerm]);
-
-    return List.generate(maps.length, (i) => Actividad.fromMap(maps[i]));
-  }
-
-  // BUSCAR actividades por obra y texto
+  /// Búsqueda inteligente por coincidencias en nombre o descripción dentro de una obra
   Future<List<Actividad>> searchByObra(int idObra, String query) async {
-    final searchTerm = '%$query%';
-    final List<Map<String, dynamic>> maps = await db.rawQuery('''
-      SELECT * FROM actividades 
-      WHERE id_obra = ? 
-      AND (nombre LIKE ? OR descripcion LIKE ?)
-      ORDER BY id_actividad
-    ''', [idObra, searchTerm, searchTerm]);
-
-    return List.generate(maps.length, (i) => Actividad.fromMap(maps[i]));
+    final searchTerm = '%${query.trim()}%';
+    final maps = await db.query(
+      'actividades',
+      where: 'id_obra = ? AND (nombre LIKE ? OR descripcion LIKE ?)',
+      whereArgs: [idObra, searchTerm, searchTerm],
+      orderBy: 'id_actividad',
+    );
+    return maps.map((m) => Actividad.fromMap(m)).toList();
   }
 
-  // OBTENER actividades próximas a vencer (con fecha estimada)
-  Future<List<Actividad>> getProximasAVencer({int dias = 7}) async {
-    final List<Map<String, dynamic>> maps = await db.rawQuery('''
-      SELECT * FROM actividades 
-      WHERE estado = 'PENDIENTE' OR estado = 'EN_PROGRESO'
-      ORDER BY id_obra
-      LIMIT 20
-    ''');
+  /// Genera un resumen estadístico del estado de las tareas para reportes de obra
+  Future<Map<String, int>> getEstadisticasByObra(int idObra) async {
+    final result = await db.rawQuery('''
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN estado = 'COMPLETADA' THEN 1 ELSE 0 END) as finalizados,
+        SUM(CASE WHEN estado = 'EN_PROGRESO' THEN 1 ELSE 0 END) as en_proceso
+      FROM actividades 
+      WHERE id_obra = ?
+    ''', [idObra]);
 
-    return List.generate(maps.length, (i) => Actividad.fromMap(maps[i]));
-  }
-
-  // OBTENER estadísticas de actividades (solo conteo de avances)
-  Future<Map<String, dynamic>> getEstadisticasByObra(int idObra) async {
-    final total = await db.rawQuery(
-      'SELECT COUNT(*) FROM actividades WHERE id_obra = ?',
-      [idObra],
-    );
-    final completadas = await db.rawQuery(
-      'SELECT COUNT(*) FROM actividades WHERE id_obra = ? AND estado = ?',
-      [idObra, 'COMPLETADA'],
-    );
-    final enProgreso = await db.rawQuery(
-      'SELECT COUNT(*) FROM actividades WHERE id_obra = ? AND estado = ?',
-      [idObra, 'EN_PROGRESO'],
-    );
-    final registrados = await db.rawQuery(
-      'SELECT COUNT(*) FROM avances WHERE id_actividad IN (SELECT id_actividad FROM actividades WHERE id_obra = ?)',
-      [idObra],
-    );
+    if (result.isEmpty) return {'total': 0, 'finalizados': 0, 'en_proceso': 0};
 
     return {
-      'total': Sqflite.firstIntValue(total) ?? 0,
-      'registrados': Sqflite.firstIntValue(registrados) ?? 0,
-      'en_proceso': Sqflite.firstIntValue(enProgreso) ?? 0,
-      'finalizados': Sqflite.firstIntValue(completadas) ?? 0,
+      'total': (result.first['total'] as int?) ?? 0,
+      'finalizados': (result.first['finalizados'] as int?) ?? 0,
+      'en_proceso': (result.first['en_proceso'] as int?) ?? 0,
     };
   }
-
 }
 

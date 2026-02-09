@@ -5,7 +5,7 @@ class LoadingWidget extends StatelessWidget {
 
   const LoadingWidget({
     super.key,
-    this.message = 'Cargando...',
+    this.message = 'Cargando datos...',
   });
 
   @override
@@ -14,19 +14,36 @@ class LoadingWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(
-            color: Colors.orange,
-            strokeWidth: 3,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-            ),
-          ),
+          _buildSpinner(),
+          const SizedBox(height: 20),
+          _buildMessage(),
         ],
+      ),
+    );
+  }
+
+  // Indicador de carga
+  Widget _buildSpinner() {
+    return const SizedBox(
+      width: 45,
+      height: 45,
+      child: CircularProgressIndicator(
+        color: Colors.orange,
+        strokeWidth: 5,
+        strokeCap: StrokeCap.round,
+      ),
+    );
+  }
+
+  // Texto de estado
+  Widget _buildMessage() {
+    return Text(
+      message.toUpperCase(),
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w900,
+        color: Colors.white.withOpacity(0.7),
+        letterSpacing: 1.5,
       ),
     );
   }

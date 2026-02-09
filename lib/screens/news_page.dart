@@ -57,9 +57,9 @@ class _NewsPageState extends State<NewsPage> {
     // cambiar el color de la hora/iconos de la barra superior
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent, // Barra transparente
-        statusBarIconBrightness: Brightness.light, // Iconos blancos
-        statusBarBrightness: Brightness.dark, // Para iOS
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFF10121D),

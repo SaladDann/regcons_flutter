@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
+/// Representa una tarea específica dentro de un proyecto de construcción.
+/// Gestiona el ciclo de vida de la actividad y su representación visual en la UI.
 class Actividad {
   int? idActividad;
   int idObra;
   String nombre;
   String? descripcion;
   String estado;
-
-  // Solo calculado temporalmente para UI, no persistente
-  double porcentajeCompletado = 0;
+  double porcentajeCompletado;
 
   Actividad({
     this.idActividad,
@@ -19,18 +19,18 @@ class Actividad {
     this.porcentajeCompletado = 0,
   });
 
-  // Convertir de Map a Actividad (solo columnas reales de BD)
+  /// Reconstruye la actividad desde un mapa de BD asegurando tipos de datos correctos.
   factory Actividad.fromMap(Map<String, dynamic> map) {
     return Actividad(
-      idActividad: map['id_actividad'],
-      idObra: map['id_obra'],
-      nombre: map['nombre'],
-      descripcion: map['descripcion'],
-      estado: map['estado'] ?? 'PENDIENTE',
+      idActividad: map['id_actividad'] as int?,
+      idObra: map['id_obra'] as int,
+      nombre: map['nombre'] as String,
+      descripcion: map['descripcion'] as String?,
+      estado: (map['estado'] as String?) ?? 'PENDIENTE',
     );
   }
 
-  // Convertir de Actividad a Map (solo columnas reales de BD)
+  /// Serializa los datos reales de la entidad para almacenamiento local.
   Map<String, dynamic> toMap() {
     return {
       'id_actividad': idActividad,
@@ -41,7 +41,9 @@ class Actividad {
     };
   }
 
-  // Métodos de utilidad para UI
+  // --- Atributos Dinámicos para UI ---
+
+  /// Retorna el color temático según el estado actual de la tarea.
   Color get estadoColor {
     switch (estado) {
       case 'COMPLETADA':
@@ -49,7 +51,7 @@ class Actividad {
       case 'EN_PROGRESO':
         return Colors.orange;
       case 'PENDIENTE':
-        return Colors.yellow;
+        return Colors.blueGrey;
       case 'ATRASADA':
         return Colors.red;
       default:
@@ -57,45 +59,43 @@ class Actividad {
     }
   }
 
+  /// Retorna el icono representativo para indicadores visuales.
   IconData get estadoIcon {
     switch (estado) {
       case 'COMPLETADA':
-        return Icons.check_circle;
+        return Icons.check_circle_outline;
       case 'EN_PROGRESO':
-        return Icons.play_circle_fill;
+        return Icons.pending_actions;
       case 'PENDIENTE':
-        return Icons.schedule;
+        return Icons.hourglass_empty;
       case 'ATRASADA':
-        return Icons.warning;
+        return Icons.error_outline;
       default:
-        return Icons.help;
+        return Icons.help_outline;
     }
   }
 
+  /// Versión amigable para el usuario del estado técnico.
   String get estadoTexto {
     switch (estado) {
       case 'COMPLETADA':
-        return 'Completada';
+        return 'Finalizada';
       case 'EN_PROGRESO':
-        return 'En Progreso';
+        return 'En ejecución';
       case 'PENDIENTE':
-        return 'Pendiente';
+        return 'Por iniciar';
       case 'ATRASADA':
-        return 'Atrasada';
+        return 'Con retraso';
       default:
         return estado;
     }
   }
 
-  // Validaciones
-  bool get esCompletada => estado == 'COMPLETADA';
-  bool get tieneDescripcion => descripcion != null && descripcion!.isNotEmpty;
+  /// Formatea el progreso numérico para etiquetas de texto.
+  String get progresoLabel => '${porcentajeCompletado.toStringAsFixed(0)}%';
 
-  String? get porcentajeCompletadoTexto {
-    return '${porcentajeCompletado.toStringAsFixed(1)}% completado';
-  }
-
-  // Copiar con nuevos valores
+  // --- Lógica de Negocio y Validación ---
+  /// Permite crear copias del objeto con modificaciones específicas (Inmutabilidad parcial).
   Actividad copyWith({
     int? idActividad,
     int? idObra,
@@ -114,18 +114,11 @@ class Actividad {
     );
   }
 
-  // Validar antes de guardar
+  /// Realiza una verificación de integridad antes de intentar la persistencia.
   List<String> validar() {
     final errores = <String>[];
-
-    if (nombre.isEmpty) {
-      errores.add('El nombre de la actividad es requerido');
-    }
-
-    if (idObra <= 0) {
-      errores.add('Debe seleccionar una obra válida');
-    }
-
+    if (nombre.trim().isEmpty) errores.add('El nombre no puede estar vacío');
+    if (idObra <= 0) errores.add('Vínculo de obra inválido');
     return errores;
   }
 }

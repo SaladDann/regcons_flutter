@@ -6,25 +6,25 @@ class SesionDao {
 
   SesionDao(this.db);
 
+  /// Registra una nueva sesión en el dispositivo
   Future<int> insert(Sesion sesion) async {
     return await db.insert('sesiones', sesion.toMap());
   }
 
+  /// Recupera una sesión activa validando su token único
   Future<Sesion?> getActiveByToken(String token) async {
-    final List<Map<String, dynamic>> maps = await db.query(
+    final maps = await db.query(
       'sesiones',
       where: 'token = ? AND activa = 1',
       whereArgs: [token],
     );
 
-    if (maps.isNotEmpty) {
-      return Sesion.fromMap(maps.first);
-    }
-    return null;
+    return maps.isNotEmpty ? Sesion.fromMap(maps.first) : null;
   }
 
+  /// Obtiene la sesión más reciente del usuario que aún esté marcada como activa
   Future<Sesion?> getLastActiveByUser(int userId) async {
-    final List<Map<String, dynamic>> maps = await db.query(
+    final maps = await db.query(
       'sesiones',
       where: 'id_usuario = ? AND activa = 1',
       whereArgs: [userId],
@@ -32,12 +32,10 @@ class SesionDao {
       limit: 1,
     );
 
-    if (maps.isNotEmpty) {
-      return Sesion.fromMap(maps.first);
-    }
-    return null;
+    return maps.isNotEmpty ? Sesion.fromMap(maps.first) : null;
   }
 
+  /// Desactiva todas las sesiones abiertas de un usuario específico
   Future<void> invalidateAllUserSessions(int userId) async {
     await db.update(
       'sesiones',
@@ -47,6 +45,7 @@ class SesionDao {
     );
   }
 
+  /// Invalida una sesión puntual mediante su identificador primario
   Future<void> invalidateSession(int sessionId) async {
     await db.update(
       'sesiones',
@@ -56,6 +55,7 @@ class SesionDao {
     );
   }
 
+  /// Elimina físicamente de la base de datos los registros cuya fecha de validez haya expirado
   Future<void> cleanExpiredSessions() async {
     final now = DateTime.now().millisecondsSinceEpoch;
     await db.delete(
@@ -65,8 +65,9 @@ class SesionDao {
     );
   }
 
+  /// Lista todas las sesiones activas en el sistema para auditoría o sincronización
   Future<List<Sesion>> getActiveSessions() async {
-    final List<Map<String, dynamic>> maps = await db.query(
+    final maps = await db.query(
       'sesiones',
       where: 'activa = 1',
     );

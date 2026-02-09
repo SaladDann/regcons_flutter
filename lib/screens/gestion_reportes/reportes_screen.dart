@@ -7,10 +7,12 @@ import '../../services/gestion_reportes/reporte_pdf_service.dart';
 import '../../services/gestion_reportes/reportes_service.dart';
 
 class ReportesScreen extends StatefulWidget {
-  const ReportesScreen({super.key});
+  final Obra? obraSeleccionada;
+
+  const ReportesScreen({super.key, this.obraSeleccionada});
 
   @override
-  _ReportesScreenState createState() => _ReportesScreenState();
+  State<ReportesScreen> createState() => _ReportesScreenState();
 }
 
 class _ReportesScreenState extends State<ReportesScreen> {
@@ -29,7 +31,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
     _cargarObras();
   }
 
-  /// Carga la lista de obras activas al iniciar
+  /// Recupera las obras activas de la base de datos
   Future<void> _cargarObras() async {
     setState(() => _cargando = true);
     try {
@@ -40,63 +42,64 @@ class _ReportesScreenState extends State<ReportesScreen> {
       if (lista.isNotEmpty) {
         setState(() {
           _obrasDisponibles = lista;
-          _obraSeleccionada = lista.first;
+
+          // Si recibimos una obra desde HomePage, usarla
+          if (widget.obraSeleccionada != null && widget.obraSeleccionada!.idObra != null) {
+            // Buscar si la obra recibida está en la lista
+            final obraEncontrada = lista.firstWhere(
+                  (o) => o.idObra == widget.obraSeleccionada!.idObra,
+              orElse: () => lista.first,
+            );
+            _obraSeleccionada = obraEncontrada;
+          } else {
+            // Si no hay obra recibida, usar la primera
+            _obraSeleccionada = lista.first;
+          }
         });
         await _generarDataReporte();
       }
     } catch (e) {
       _showError("Error al cargar obras: $e");
     } finally {
-      setState(() => _cargando = false);
+      if (mounted) setState(() => _cargando = false);
     }
   }
 
-  /// Usa el ReporteService para obtener toda la data procesada (HH, Incidentes, etc.)
+  /// Procesa los datos de la obra para generar métricas
   Future<void> _generarDataReporte() async {
     if (_obraSeleccionada == null) return;
 
     setState(() => _cargando = true);
     try {
-      // Llamamos al servicio unificado
       final data = await _reporteService.generarDataReporte(
         _obraSeleccionada!.idObra!,
-        "Admin RegCons", // Aquí podrías pasar el nombre del usuario logueado
+        "Admin RegCons",
       );
-
-      setState(() {
-        _reporteActual = data;
-      });
+      setState(() => _reporteActual = data);
     } catch (e) {
       _showError("Error al procesar datos: $e");
     } finally {
-      setState(() => _cargando = false);
+      if (mounted) setState(() => _cargando = false);
     }
   }
 
-  /// Llama al PDF Service corregido
+  /// Exporta el reporte a PDF
   void _exportarPDF() async {
     if (_reporteActual == null) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Generando documento PDF..."),
-        backgroundColor: Colors.orange,
-        behavior: SnackBarBehavior.floating,
-      ),
+      const SnackBar(content: Text("Generando documento PDF..."), backgroundColor: Colors.orange, behavior: SnackBarBehavior.floating),
     );
-
     try {
-      // Ahora enviamos el modelo directo, sin mapas manuales
       await _pdfService.exportarPdf(_reporteActual!);
     } catch (e) {
       _showError("Error al exportar PDF: $e");
     }
   }
 
+  /// Notifica errores en pantalla
   void _showError(String msg) {
-    debugPrint(msg);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      SnackBar(content: Text(msg), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -115,51 +118,56 @@ class _ReportesScreenState extends State<ReportesScreen> {
           )
         ],
       ),
-      body: _cargando
-          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
-          : _obrasDisponibles.isEmpty
-          ? const Center(child: Text("No hay obras activas", style: TextStyle(color: Colors.white54)))
-          : SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildLabel("OBRA BAJO ANALISIS"),
-            _buildFiltroObra(),
+      body: _buildBody(),
+    );
+  }
+
+  /// Cuerpo principal con scroll
+  Widget _buildBody() {
+    if (_cargando && _obrasDisponibles.isEmpty) {
+      return const Center(child: CircularProgressIndicator(color: Colors.orange));
+    }
+
+    if (_obrasDisponibles.isEmpty) {
+      return const Center(child: Text("No hay obras activas", style: TextStyle(color: Colors.white54)));
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildLabel("OBRA BAJO ANÁLISIS"),
+          _buildFiltroObra(),
+          const SizedBox(height: 20),
+          if (_reporteActual != null) ...[
+            _buildHeaderInfo(),
+            const SizedBox(height: 20),
+            _buildMetricasClave(),
+            const SizedBox(height: 12),
+            _buildSeccionProgreso(),
+            const SizedBox(height: 12),
+            _buildSeccionSeguridad(),
             const SizedBox(height: 25),
-            if (_reporteActual != null) ...[
-              _buildHeaderInfo(),
-              const SizedBox(height: 25),
-              _buildMetricasClave(),
-              const SizedBox(height: 25),
-              _buildSeccionProgreso(),
-              const SizedBox(height: 25),
-              _buildSeccionSeguridad(),
-              const SizedBox(height: 25),
-              _buildLabel("DETALLE DE ACTIVIDADES"),
-              _buildResumenActividades(),
-            ]
-          ],
-        ),
+            _buildLabel("DETALLE DE ACTIVIDADES"),
+            _buildResumenActividades(),
+            const SizedBox(height: 20),
+          ]
+        ],
       ),
     );
   }
 
-  // --- WIDGETS DE APOYO ---
-
+  /// Títulos de sección
   Widget _buildLabel(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 10, left: 4),
-    child: Text(text,
-        style: const TextStyle(
-            color: Colors.orange,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.1)),
+    padding: const EdgeInsets.only(bottom: 8, left: 4),
+    child: Text(text, style: const TextStyle(color: Colors.orange, fontSize: 10, letterSpacing: 1.2)),
   );
 
+  /// Selector de obra
   Widget _buildFiltroObra() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1D2E),
         borderRadius: BorderRadius.circular(12),
@@ -169,16 +177,11 @@ class _ReportesScreenState extends State<ReportesScreen> {
         child: DropdownButton<Obra>(
           isExpanded: true,
           dropdownColor: const Color(0xFF1A1D2E),
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: Colors.white),
           value: _obraSeleccionada,
-          items: _obrasDisponibles
-              .map((o) => DropdownMenuItem(value: o, child: Text(o.nombre)))
-              .toList(),
+          items: _obrasDisponibles.map((o) => DropdownMenuItem(value: o, child: Text(o.nombre))).toList(),
           onChanged: (val) {
-            setState(() {
-              _obraSeleccionada = val;
-              _reporteActual = null; // Reset para mostrar carga
-            });
+            setState(() { _obraSeleccionada = val; _reporteActual = null; });
             _generarDataReporte();
           },
         ),
@@ -186,29 +189,25 @@ class _ReportesScreenState extends State<ReportesScreen> {
     );
   }
 
+  /// Info de cabecera
   Widget _buildHeaderInfo() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.orange.withOpacity(0.2))),
+          color: Colors.orange.withOpacity(0.07),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.orange.withOpacity(0.15))),
       child: Row(
         children: [
-          const CircleAvatar(
-            radius: 22,
-            backgroundColor: Colors.orange,
-            child: Icon(Icons.business_center, color: Colors.black, size: 20),
-          ),
-          const SizedBox(width: 15),
+          const CircleAvatar(radius: 22, backgroundColor: Colors.orange, child: Icon(Icons.business_center, color: Colors.black, size: 20)),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_reporteActual!.obra.nombre,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                Text("Cliente: ${_reporteActual!.obra.cliente ?? 'No registrado'}",
-                    style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                Text(_reporteActual!.obra.nombre, style: const TextStyle(fontSize: 16, color: Colors.white)),
+                const SizedBox(height: 2),
+                Text("Cliente: ${_reporteActual!.obra.cliente ?? 'No registrado'}", style: const TextStyle(color: Colors.white38, fontSize: 11)),
               ],
             ),
           ),
@@ -217,12 +216,13 @@ class _ReportesScreenState extends State<ReportesScreen> {
     );
   }
 
+  /// Grid de métricas principales
   Widget _buildMetricasClave() {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
-      childAspectRatio: 1.4,
+      childAspectRatio: 1.35,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
       children: [
@@ -234,32 +234,35 @@ class _ReportesScreenState extends State<ReportesScreen> {
     );
   }
 
+  /// Tarjeta KPI individual
   Widget _kpiCard(String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
           color: const Color(0xFF1A1D2E),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white.withOpacity(0.05))),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: color, size: 20),
-          const SizedBox(height: 5),
-          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-          Text(label, style: const TextStyle(fontSize: 9, color: Colors.white38), textAlign: TextAlign.center),
+          const SizedBox(height: 6),
+          Text(value, style: TextStyle(fontSize: 18, color: color)),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(fontSize: 10, color: Colors.white38), textAlign: TextAlign.center),
         ],
       ),
     );
   }
 
+  /// Sección de progreso acumulado
   Widget _buildSeccionProgreso() {
     double progreso = (_reporteActual!.porcentajeAvance / 100).clamp(0.0, 1.0);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
           color: const Color(0xFF1A1D2E),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white.withOpacity(0.05))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,41 +270,47 @@ class _ReportesScreenState extends State<ReportesScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("AVANCE DE OBRA",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white)),
-              Text("${_reporteActual!.porcentajeAvance.toStringAsFixed(1)}%",
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange, fontSize: 18)),
+              const Text("AVANCE DE OBRA", style: TextStyle(fontSize: 11, color: Colors.white, letterSpacing: 0.5)),
+              Text("${_reporteActual!.porcentajeAvance.toStringAsFixed(1)}%", style: const TextStyle(color: Colors.orange, fontSize: 16)),
             ],
           ),
-          const SizedBox(height: 15),
-          LinearProgressIndicator(
-            value: progreso,
-            minHeight: 8,
-            backgroundColor: Colors.white10,
-            valueColor: AlwaysStoppedAnimation<Color>(progreso > 0.7 ? Colors.greenAccent : Colors.orange),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progreso,
+              minHeight: 8,
+              backgroundColor: Colors.white10,
+              valueColor: AlwaysStoppedAnimation<Color>(progreso > 0.7 ? Colors.greenAccent : Colors.orange),
+            ),
           ),
         ],
       ),
     );
   }
 
+  /// Sección de seguridad
   Widget _buildSeccionSeguridad() {
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
           color: const Color(0xFF1A1D2E),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.redAccent.withOpacity(0.1))),
       child: Row(
         children: [
-          const Icon(Icons.shield, color: Colors.redAccent, size: 30),
-          const SizedBox(width: 15),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.1), shape: BoxShape.circle),
+            child: const Icon(Icons.shield, color: Colors.redAccent, size: 24),
+          ),
+          const SizedBox(width: 14),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("SEGURIDAD", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              Text("${_reporteActual!.totalIncidentes} Incidentes registrados",
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              const Text("SEGURIDAD", style: TextStyle(color: Colors.white, fontSize: 13)),
+              const SizedBox(height: 2),
+              Text("${_reporteActual!.totalIncidentes} Incidentes registrados", style: const TextStyle(color: Colors.white54, fontSize: 11)),
             ],
           )
         ],
@@ -309,6 +318,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
     );
   }
 
+  /// Listado de actividades detalladas
   Widget _buildResumenActividades() {
     return ListView.builder(
       shrinkWrap: true,
@@ -316,13 +326,18 @@ class _ReportesScreenState extends State<ReportesScreen> {
       itemCount: _reporteActual!.actividades.length,
       itemBuilder: (context, index) {
         final act = _reporteActual!.actividades[index];
-        return Card(
-          color: const Color(0xFF1A1D2E),
+        return Container(
           margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1D2E),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.03)),
+          ),
           child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
             title: Text(act.nombre, style: const TextStyle(color: Colors.white, fontSize: 13)),
             subtitle: Text(act.estado, style: const TextStyle(color: Colors.orange, fontSize: 11)),
-            trailing: Text("${act.porcentajeCompletado}%", style: const TextStyle(color: Colors.white38)),
+            trailing: Text("${act.porcentajeCompletado}%", style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ),
         );
       },
