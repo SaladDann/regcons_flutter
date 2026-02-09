@@ -35,3 +35,12 @@ Si deseas clonar el proyecto y ejecutarlo en tu entorno local:
     `flutter pub get`
 3.  **Ejecutar:**
     `flutter run`
+    
+    ## 📲 Descarga Directa
+Para probar el MVP en tu dispositivo Android, haz clic en el siguiente botón:
+
+[<img src="https://img.shields.io/badge/Descargar_APK-Directo-orange?style=for-the-badge&logo=android&logoColor=white" width="200">](https://github.com/SaladDann/regcons_flutter/releases/download/v1.0.0-mvp/app-arm64-v8a-release.apk](https://github.com/SaladDann/regcons_flutter/releases/download/v1.0.0-mvp/app-arm64-v8a-release.apk)
+
+*(Requiere Android 7.0 o superior)*
+
+---
