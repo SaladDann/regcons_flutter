@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:regcons/screens/gestion_obras/obras_screen.dart';
 import 'package:regcons/screens/home_page.dart';
 import 'package:regcons/screens/auth/login_page.dart';
 import 'package:regcons/screens/auth/registro_form_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MainApp());
 }
 

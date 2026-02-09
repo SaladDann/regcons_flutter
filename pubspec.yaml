@@ -1,5 +1,5 @@
 name: regcons
-description: "A new Flutter project."
+description: "Sistema de gestión y registro para construcción."
 publish_to: 'none'
 version: 0.1.0
 
@@ -10,27 +10,26 @@ dependencies:
   flutter:
     sdk: flutter
   sqflite: ^2.3.0
+  shared_preferences: ^2.3.5
   path: ^1.9.0
-  intl: ^0.19.0
+  intl: ^0.20.2
   url_launcher: ^6.2.5
   image_picker: ^1.1.1
-    # Dependencias para PDF
+
+  # Dependencias para PDF
   pdf: ^3.10.8
   printing: ^5.12.0
-  share_plus: ^7.2.1
+  share_plus: ^12.0.1
   path_provider: ^2.1.2
   open_file: ^3.3.2
-
-
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.0
-  shared_preferences: ^2.3.5
-  http: ^1.2.0
   xml: ^6.5.0
 
 flutter:
@@ -40,10 +39,10 @@ flutter:
     - assets/images/
 
 flutter_launcher_icons:
-  android: true
+  android: "launcher_icon"
   ios: true
   image_path: "assets/icon/icon_regcons.png"
-  adaptive_icon_background: "#ffffff" 
+  adaptive_icon_background: "#ffffff"
   adaptive_icon_foreground: "assets/icon/icon_regcons.png"
 
 flutter_native_splash:

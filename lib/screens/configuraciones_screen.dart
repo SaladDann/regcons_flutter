@@ -55,6 +55,60 @@ class _ConfiguracionesScreenState extends State<ConfiguracionesScreen> {
     }
   }
 
+  // --- LÓGICA DE IMAGEN (EDITAR Y ELIMINAR) ---
+
+  void _opcionesImagen() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF181B35),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.orange),
+              title: const Text('Cambiar foto de perfil', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _cambiarImagen();
+              },
+            ),
+            // Solo mostramos eliminar si realmente hay una ruta de imagen válida
+            if (_rutaImagen != null && _rutaImagen!.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                title: const Text('Eliminar foto actual', style: TextStyle(color: Colors.redAccent)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _eliminarImagen();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _cambiarImagen() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+    if (image != null && _idUsuario != 0) {
+      await _userService.actualizarFotoPerfil(_idUsuario, image.path);
+      setState(() => _rutaImagen = image.path);
+      _mostrarSnackBar('Foto actualizada correctamente');
+      if (widget.onAccountChanged != null) widget.onAccountChanged!();
+    }
+  }
+
+  Future<void> _eliminarImagen() async {
+    if (_idUsuario != 0) {
+      // Enviamos '' (String vacío) en lugar de null para evitar errores de tipo
+      await _userService.actualizarFotoPerfil(_idUsuario, '');
+      setState(() => _rutaImagen = '');
+      _mostrarSnackBar('Foto eliminada');
+      if (widget.onAccountChanged != null) widget.onAccountChanged!();
+    }
+  }
+
   // --- VENTANAS MODALES ---
 
   void _mostrarPerfil() {
@@ -129,7 +183,6 @@ class _ConfiguracionesScreenState extends State<ConfiguracionesScreen> {
                     return;
                   }
 
-                  // --- DIÁLOGO DE CONFIRMACIÓN ---
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -155,7 +208,6 @@ class _ConfiguracionesScreenState extends State<ConfiguracionesScreen> {
 
                             if (mounted) {
                               if (exito) {
-                                // Cerramos todo y mandamos al Login
                                 _ejecutarCierreSesion(soloEstaCuenta: false);
                               } else {
                                 Navigator.pop(context);
@@ -251,44 +303,56 @@ class _ConfiguracionesScreenState extends State<ConfiguracionesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF10121D),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        children: [
-          _buildPerfilHeader(),
-          if (_otrasCuentas.isNotEmpty) _buildSelectorCuentas(),
-          const SizedBox(height: 25),
-          _buildSeccion('MI CUENTA', [
-            _buildTile(Icons.person_add_alt_1_outlined, 'Añadir cuenta', 'Usar otro perfil',
-                    () => _ejecutarCierreSesion(soloEstaCuenta: false), color: Colors.orange),
-            _buildTile(Icons.person_outline, 'Perfil', 'Datos personales', _mostrarPerfil),
-            _buildTile(Icons.security, 'Seguridad', 'Contraseña y acceso', _mostrarSeguridad),
-          ]),
-          const SizedBox(height: 25),
-          _buildSeccion('SISTEMA', [
-            _buildTile(Icons.info_outline, 'Acerca de', 'Versión 1.0.2', _mostrarAcercaDe),
-            _buildTile(Icons.power_settings_new, 'Cerrar Sesión', 'Salir de la app',
-                _mostrarDialogoCierreSesion, color: Colors.redAccent),
-          ]),
-        ],
+      body: SafeArea(
+        bottom: true,
+        child: ListView(
+          padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 100),
+          children: [
+            _buildPerfilHeader(),
+            if (_otrasCuentas.isNotEmpty) _buildSelectorCuentas(),
+            const SizedBox(height: 25),
+            _buildSeccion('MI CUENTA', [
+              _buildTile(Icons.person_add_alt_1_outlined, 'Añadir cuenta', 'Usar otro perfil',
+                      () => _ejecutarCierreSesion(soloEstaCuenta: false), color: Colors.orange),
+              _buildTile(Icons.person_outline, 'Perfil', 'Datos personales', _mostrarPerfil),
+              _buildTile(Icons.security, 'Seguridad', 'Contraseña y acceso', _mostrarSeguridad),
+            ]),
+            const SizedBox(height: 25),
+            _buildSeccion('SISTEMA', [
+              _buildTile(Icons.info_outline, 'Acerca de', 'Versión 1.0.2', _mostrarAcercaDe),
+              _buildTile(Icons.power_settings_new, 'Cerrar Sesión', 'Salir de la app',
+                  _mostrarDialogoCierreSesion, color: Colors.redAccent),
+            ]),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildPerfilHeader() {
+    // Verificación robusta de la imagen
+    bool tieneImagen = _rutaImagen != null &&
+        _rutaImagen!.isNotEmpty &&
+        File(_rutaImagen!).existsSync();
+
     return Column(
       children: [
         GestureDetector(
-          onTap: _cambiarImagen,
+          onTap: _opcionesImagen,
           child: Stack(
             alignment: Alignment.bottomRight,
             children: [
               CircleAvatar(
                 radius: 50,
                 backgroundColor: const Color(0xFF181B35),
-                backgroundImage: (_rutaImagen != null && File(_rutaImagen!).existsSync()) ? FileImage(File(_rutaImagen!)) : null,
-                child: (_rutaImagen == null) ? const Icon(Icons.person, size: 50, color: Colors.orange) : null,
+                backgroundImage: tieneImagen ? FileImage(File(_rutaImagen!)) : null,
+                child: !tieneImagen ? const Icon(Icons.person, size: 50, color: Colors.orange) : null,
               ),
-              const CircleAvatar(radius: 15, backgroundColor: Colors.orange, child: Icon(Icons.camera_alt, size: 14, color: Colors.white)),
+              const CircleAvatar(
+                  radius: 15,
+                  backgroundColor: Colors.orange,
+                  child: Icon(Icons.camera_alt, size: 14, color: Colors.white)
+              ),
             ],
           ),
         ),
@@ -309,12 +373,21 @@ class _ConfiguracionesScreenState extends State<ConfiguracionesScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('OTRAS CUENTAS', style: TextStyle(color: Colors.white38, fontSize: 10, letterSpacing: 1)),
-          ..._otrasCuentas.map((cuenta) => ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(radius: 18, backgroundImage: (cuenta['ruta_foto'] != null) ? FileImage(File(cuenta['ruta_foto'])) : null, child: (cuenta['ruta_foto'] == null) ? const Icon(Icons.person, size: 20) : null),
-            title: Text(cuenta['nombre_completo'], style: const TextStyle(color: Colors.white, fontSize: 14)),
-            onTap: () => _cambiarDeCuenta(cuenta['id_usuario']),
-          )),
+          ..._otrasCuentas.map((cuenta) {
+            bool tieneImagenOtra = cuenta['ruta_foto'] != null &&
+                cuenta['ruta_foto'].toString().isNotEmpty &&
+                File(cuenta['ruta_foto']).existsSync();
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                  radius: 18,
+                  backgroundImage: tieneImagenOtra ? FileImage(File(cuenta['ruta_foto'])) : null,
+                  child: !tieneImagenOtra ? const Icon(Icons.person, size: 20) : null
+              ),
+              title: Text(cuenta['nombre_completo'], style: const TextStyle(color: Colors.white, fontSize: 14)),
+              onTap: () => _cambiarDeCuenta(cuenta['id_usuario']),
+            );
+          }),
         ],
       ),
     );
@@ -339,8 +412,8 @@ class _ConfiguracionesScreenState extends State<ConfiguracionesScreen> {
 
   InputDecoration _modalInputStyle(String label) => InputDecoration(
     labelText: label, labelStyle: const TextStyle(color: Colors.white54),
-    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
-    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.orange)),
+    enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
+    focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.orange)),
   );
 
   Widget _infoRow(IconData icon, String label, String value) => Padding(
@@ -354,14 +427,6 @@ class _ConfiguracionesScreenState extends State<ConfiguracionesScreen> {
       ])
     ]),
   );
-
-  Future<void> _cambiarImagen() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
-    if (image != null && _idUsuario != 0) {
-      await _userService.actualizarFotoPerfil(_idUsuario, image.path);
-      setState(() => _rutaImagen = image.path);
-    }
-  }
 
   void _mostrarSnackBar(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje), backgroundColor: Colors.orange));

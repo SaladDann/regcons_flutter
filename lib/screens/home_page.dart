@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:regcons/screens/gestion_reportes/reportes_screen.dart';
 import '../models/gestion_obras/obra.dart';
 import '../services/gestion_obras/obra_service.dart';
+import '../services/user_service.dart'; // Servicio para traer el perfil real
 import 'gestion_incidentes/reportes_incidentes_screen.dart';
 import 'gestion_obras/obra_detalle_screen.dart';
 import 'gestion_obras/obras_screen.dart';
@@ -28,6 +29,7 @@ class _HomePageState extends State<HomePage> {
   int? _idUsuarioActual;
 
   final ObraService _obraService = ObraService();
+  final UserService _userService = UserService(); // Instancia del servicio de usuario
 
   static const List<String> _titles = [
     'Ajustes', 'Noticias', 'Inicio', 'Incidentes', 'Reportes'
@@ -43,15 +45,22 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _inicializarDatos() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _idUsuarioActual = prefs.getInt('id_usuario') ?? 0;
-      _rutaImagen = prefs.getString('user_profile_path');
-    });
+    final int id = prefs.getInt('id_usuario') ?? 0;
 
-    if (_idUsuarioActual != 0) {
-      await _cargarObrasActivas();
+    if (id != 0) {
+      // CARGA IGUAL QUE EN CONFIGURACIONES: Consultamos la DB directamente
+      final perfil = await _userService.obtenerPerfilCompleto(id);
+
+      if (mounted) {
+        setState(() {
+          _idUsuarioActual = id;
+          // Obtenemos la ruta actualizada desde el perfil de la base de datos
+          _rutaImagen = perfil?['ruta_foto'];
+        });
+        await _cargarObrasActivas();
+      }
     } else {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -60,7 +69,6 @@ class _HomePageState extends State<HomePage> {
     setState(() => _isLoading = true);
 
     try {
-      // Usamos el ID recuperado en la inicialización
       if (_idUsuarioActual == null || _idUsuarioActual == 0) {
         final prefs = await SharedPreferences.getInstance();
         _idUsuarioActual = prefs.getInt('id_usuario') ?? 0;
@@ -191,9 +199,14 @@ class _HomePageState extends State<HomePage> {
           onTap: () => setState(() => _selectedIndex = 0),
           child: CircleAvatar(
             radius: 24,
-            backgroundColor: Colors.orange.withOpacity(0.2),
-            backgroundImage: (_rutaImagen != null && _rutaImagen!.isNotEmpty) ? FileImage(File(_rutaImagen!)) : null,
-            child: (_rutaImagen == null || _rutaImagen!.isEmpty) ? const Icon(Icons.person, color: Colors.orange, size: 28) : null,
+            backgroundColor: const Color(0xFF181B35),
+            // Verificamos que la ruta no sea nula y que el archivo exista en el almacenamiento
+            backgroundImage: (_rutaImagen != null && File(_rutaImagen!).existsSync())
+                ? FileImage(File(_rutaImagen!))
+                : null,
+            child: (_rutaImagen == null || (_rutaImagen != null && !File(_rutaImagen!).existsSync()))
+                ? const Icon(Icons.person, color: Colors.orange, size: 28)
+                : null,
           ),
         ),
         const SizedBox(width: 12),
@@ -316,7 +329,6 @@ class _HomePageState extends State<HomePage> {
             icon: Icons.business_center_outlined,
             label: 'Gestionar\nObras',
             color: Colors.blueAccent,
-            // CORRECCIÓN AQUÍ: Pasamos el ID del usuario actual
             onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => ObrasScreen(idUsuarioActual: _idUsuarioActual ?? 0))
@@ -418,12 +430,10 @@ class _HomePageState extends State<HomePage> {
     ],
   );
 
-  //Cambio de sesion
   Future<void> cambiarCuenta(int nuevoId) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('id_usuario', nuevoId); // Actualizamos el ID activo
+    await prefs.setInt('id_usuario', nuevoId);
 
-    // Limpiamos la obra seleccionada para evitar errores de pertenencia
     setState(() {
       _obraSeleccionada = null;
       _idUsuarioActual = nuevoId;
