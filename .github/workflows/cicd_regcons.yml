@@ -1,63 +1,53 @@
 name: Pipeline REGCONS
 
-# Control de Eventos: 
 on:
   push:
-    branches: [ "main" ] # Se activa al subir directamente a main
+    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ] # Se activa al proponer fusionar código a main
+    branches: [ "main" ]
 
 jobs:
-  # FASE 1: INTEGRACIÓN CONTINUA (CI) - CALIDAD Y VERIFICACIÓN
-   quality_and_testing:
+  quality_and_testing:
     name: Control de Calidad y Pruebas Unitarias
-    runs-on: ubuntu-latest # Instancia una máquina virtual limpia con Ubuntu Linux
+    runs-on: ubuntu-latest
     steps:
-      # Paso A: Clonar el código fuente de REGCONS en el servidor virtual
-      - name: Descargar Código del Repositorio
+      - name: Descargar Codigo del Repositorio
         uses: actions/checkout@v4
 
-      # Paso B: Configurar Java JDK 17 (Requisito indispensable para construir software Android)
       - name: Configurar Entorno Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # Paso C: Instalar la versión exacta del SDK de Flutter del proyecto
       - name: Configurar Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.10.x' # Sincronizado con tu pubspec.yaml
+          flutter-version: '3.10.x'
           channel: 'stable'
-          cache: true # Guarda en caché las herramientas para agilizar futuras ejecuciones
+          cache: true
 
-      # Paso D: Descargar las dependencias declaradas (sqflite, shared_preferences, etc.)
       - name: Descargar Dependencias del Proyecto
         run: flutter pub get
 
-      # Paso E: Validar que el código cumpla con el formateo oficial de Dart
-      - name: Verificar Formato de Código
+      - name: Verificar Formato de Codigo
         run: dart format --output=none --set-exit-if-changed .
 
-      # Paso F: Ejecutar el análisis estático basándose en el archivo analysis_options.yaml
-      - name: Análisis Estático de Código (Linter)
+      - name: Analisis Estatico de Codigo
         run: flutter analyze
 
-      # Paso G: Ejecutar la suite completa de pruebas (Los 3 archivos que creamos)
       - name: Ejecutar Suite de Pruebas Automatizadas
         run: flutter test
 
-  # FASE 2: DESPLIEGUE CONTINUO (CD) - COMPILACIÓN Y PUBLICACIÓN
   build_and_release:
-    name: Compilación de APK y Despliegue del MVP
-    needs: quality_and_testing # CANDADO DE SEGURIDAD: Si la Fase 1 falla, esto NO se ejecuta
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Solo corre ante cambios consolidados en main
+    name: Compilacion de APK y Despliegue del MVP
+    needs: quality_and_testing
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Concede permisos para inyectar binarios en el apartado de Releases de GitHub
+      contents: write
     steps:
-      - name: Descargar Código del Repositorio
+      - name: Descargar Codigo del Repositorio
         uses: actions/checkout@v4
 
       - name: Configurar Entorno Java
@@ -76,34 +66,23 @@ jobs:
       - name: Descargar Dependencias
         run: flutter pub get
 
-      # Paso H: Comando que compila el binario .apk ejecutable para smartphones Android
-      - name: Compilar APK de Producción (Release)
+      - name: Compilar APK de Produccion
         run: flutter build apk --release
 
-      # Paso I: Generación dinámica del identificador de la versión basándose en el contador de GitHub
-      - name: Configurar Etiqueta de Versión
+      - name: Configurar Etiqueta de Version
         id: version_tag
         run: echo "TAG=v1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
 
-      # Paso J: Cargar el APK resultante y ponerlo a disposición de los usuarios de obra
       - name: Publicar Artefacto en GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version_tag.outputs.TAG }}
-          name: REGCONS MVP - Compilación ${{ steps.version_tag.outputs.TAG }}
+          name: REGCONS MVP - Compilacion ${{ steps.version_tag.outputs.TAG }}
           body: |
             ### Despliegue Automatizado Exitoso - REGCONS
-            El pipeline de CI/CD ha verificado la integridad del código fuente.
-
-            **Validaciones Auditadas:**
-            * [x] Formato e indentación estricta de Dart.
-            * [x] Seguridad de encriptación local y salting dinámico verificada.
-            * [x] Persistencia y consistencia en modelos SQLite aprobada.
-            * [x] Variables de entorno configuradas para Producción.
-
-            *Este archivo APK está listo para su instalación directa en dispositivos de supervisión en campo (Android 7.0 o superior).*
+            El pipeline de CI/CD ha verificado la integridad del codigo fuente de manera exitosa.
           draft: false
           prerelease: false
           files: build/app/outputs/flutter-apk/app-release.apk
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Token nativo e invisible generado por GitHub para autorizar la carga
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
