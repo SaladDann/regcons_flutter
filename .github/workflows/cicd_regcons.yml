@@ -1,103 +1,84 @@
 name: Pipeline REGCONS
 
 on:
-push:
-branches:
-- main
-pull_request:
-branches:
-- main
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-quality_and_testing:
-name: Control de Calidad y Pruebas Unitarias
-runs-on: ubuntu-latest
+  quality_and_testing:
+    name: Control de Calidad y Pruebas Unitarias
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar Codigo del Repositorio
+        uses: actions/checkout@v4
 
-```
-steps:
-  - name: Descargar Codigo del Repositorio
-    uses: actions/checkout@v4
+      - name: Configurar Entorno Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-  - name: Configurar Entorno Java
-    uses: actions/setup-java@v4
-    with:
-      distribution: zulu
-      java-version: '17'
+      - name: Configurar Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable' # Fuerza la última versión estable oficial (paridad total con tu PC)
 
-  - name: Configurar Flutter SDK
-    uses: subosito/flutter-action@v2
-    with:
-      flutter-version: '3.44.1'
-      channel: stable
-      cache: true
+      - name: Descargar Dependencias del Proyecto
+        run: flutter pub get
 
-  - name: Verificar Versiones
-    run: |
-      flutter --version
-      dart --version
+      - name: Verificar Formato de Codigo
+        run: dart format --output=none --set-exit-if-changed .
 
-  - name: Descargar Dependencias del Proyecto
-    run: flutter pub get
+      - name: Analisis Estatico de Codigo
+        run: flutter analyze
 
-  - name: Verificar Formato de Codigo
-    run: dart format --output=none --set-exit-if-changed .
+      - name: Ejecutar Suite de Pruebas Automatizadas
+        run: flutter test
 
-  - name: Analisis Estatico de Codigo
-    run: flutter analyze
+  build_and_release:
+    name: Compilacion de APK y Despliegue del MVP
+    needs: quality_and_testing
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Descargar Codigo del Repositorio
+        uses: actions/checkout@v4
 
-  - name: Ejecutar Suite de Pruebas Automatizadas
-    run: flutter test
-```
+      - name: Configurar Entorno Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-build_and_release:
-name: Compilacion de APK y Despliegue del MVP
-needs: quality_and_testing
-if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-runs-on: ubuntu-latest
+      - name: Configurar Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
 
-```
-permissions:
-  contents: write
+      - name: Descargar Dependencias
+        run: flutter pub get
 
-steps:
-  - name: Descargar Codigo del Repositorio
-    uses: actions/checkout@v4
+      - name: Compilar APK de Produccion
+        run: flutter build apk --release
 
-  - name: Configurar Entorno Java
-    uses: actions/setup-java@v4
-    with:
-      distribution: zulu
-      java-version: '17'
+      - name: Configurar Etiqueta de Version
+        id: version_tag
+        run: echo "TAG=v1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
 
-  - name: Configurar Flutter SDK
-    uses: subosito/flutter-action@v2
-    with:
-      flutter-version: '3.44.1'
-      channel: stable
-      cache: true
-
-  - name: Descargar Dependencias
-    run: flutter pub get
-
-  - name: Compilar APK de Produccion
-    run: flutter build apk --release
-
-  - name: Configurar Etiqueta de Version
-    id: version_tag
-    run: echo "TAG=v1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
-
-  - name: Publicar Artefacto en GitHub Releases
-    uses: softprops/action-gh-release@v2
-    with:
-      tag_name: ${{ steps.version_tag.outputs.TAG }}
-      name: REGCONS MVP - Compilacion ${{ steps.version_tag.outputs.TAG }}
-      body: |
-        ### Despliegue Automatizado Exitoso - REGCONS
-
-        El pipeline de CI/CD ha verificado la integridad del codigo fuente de manera exitosa.
-      draft: false
-      prerelease: false
-      files: build/app/outputs/flutter-apk/app-release.apk
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+      - name: Publicar Artefacto en GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version_tag.outputs.TAG }}
+          name: REGCONS MVP - Compilacion ${{ steps.version_tag.outputs.TAG }}
+          body: |
+            ### Despliegue Automatizado Exitoso - REGCONS
+            El pipeline de CI/CD ha verificado la integridad del codigo fuente de manera exitosa.
+          draft: false
+          prerelease: false
+          files: build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
