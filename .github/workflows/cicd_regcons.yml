@@ -23,7 +23,7 @@ jobs:
       - name: Configurar Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0' # Elevado para incorporar Dart >=3.3.0 de forma nativa
+          channel: 'stable' # Fuerza la última versión estable oficial (paridad total con tu PC)
 
       - name: Descargar Dependencias del Proyecto
         run: flutter pub get
@@ -57,7 +57,7 @@ jobs:
       - name: Configurar Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0' # Consistente en el despliegue
+          channel: 'stable'
 
       - name: Descargar Dependencias
         run: flutter pub get
