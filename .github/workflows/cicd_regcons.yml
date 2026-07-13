@@ -23,9 +23,7 @@ jobs:
       - name: Configurar Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.9' # Actualizado para soportar Dart ^3.10.4 sin romper dependencias
-          channel: 'stable'
-          cache: true
+          flutter-version: '3.16.9'
 
       - name: Descargar Dependencias del Proyecto
         run: flutter pub get
@@ -59,9 +57,7 @@ jobs:
       - name: Configurar Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.9' # Consistente en ambas fases
-          channel: 'stable'
-          cache: true
+          flutter-version: '3.16.9'
 
       - name: Descargar Dependencias
         run: flutter pub get
