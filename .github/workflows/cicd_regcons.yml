@@ -33,7 +33,7 @@ jobs:
       - name: Verificar Formato de Codigo
         run: dart format --output=none --set-exit-if-changed .
 
-      - name: Analisis Estatico de Codigo
+      - name: Analisis Estatico del Codigo
         run: flutter analyze
 
       - name: Ejecutar Suite de Pruebas Automatizadas
