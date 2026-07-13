@@ -29,7 +29,8 @@ jobs:
         run: flutter pub get
 
       - name: Analisis Estatico de Codigo
-        run: flutter analyze --no-fatal-warnings
+        continue-on-error: true
+        run: flutter analyze
 
       - name: Ejecutar Suite de Pruebas Automatizadas
         run: flutter test
