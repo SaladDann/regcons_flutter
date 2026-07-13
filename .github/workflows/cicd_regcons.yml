@@ -2,9 +2,11 @@ name: Pipeline REGCONS
 
 on:
 push:
-branches: [ "main" ]
+branches:
+- main
 pull_request:
-branches: [ "main" ]
+branches:
+- main
 
 jobs:
 quality_and_testing:
@@ -74,11 +76,6 @@ steps:
       channel: stable
       cache: true
 
-  - name: Verificar Versiones
-    run: |
-      flutter --version
-      dart --version
-
   - name: Descargar Dependencias
     run: flutter pub get
 
@@ -103,4 +100,4 @@ steps:
       files: build/app/outputs/flutter-apk/app-release.apk
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
+
