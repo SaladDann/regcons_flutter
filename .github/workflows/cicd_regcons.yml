@@ -23,7 +23,7 @@ jobs:
       - name: Configurar Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.10.x'
+          flutter-version: '3.10.4'
           channel: 'stable'
           cache: true
 
@@ -59,7 +59,7 @@ jobs:
       - name: Configurar Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.10.x'
+          flutter-version: '3.10.4'
           channel: 'stable'
           cache: true
 
