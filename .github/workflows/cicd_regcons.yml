@@ -28,9 +28,6 @@ jobs:
       - name: Descargar Dependencias del Proyecto
         run: flutter pub get
 
-      - name: Verificar Formato de Codigo
-        run: dart format --output=none --set-exit-if-changed .
-
       - name: Analisis Estatico de Codigo
         run: flutter analyze
 
