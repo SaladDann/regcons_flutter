@@ -1,0 +1,19 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    avoid_print: error # Transforma los 'print' en errores para evitar fugas de información en obra
+    missing_required_param: error
+    missing_return: error
+
+linter:
+  rules:
+    - avoid_empty_else
+    - prefer_const_constructors
+    - prefer_is_empty
+    - always_declare_return_types
+
