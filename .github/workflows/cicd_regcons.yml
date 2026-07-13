@@ -1,4 +1,4 @@
-name: REGCONS Automated CI/CD
+name: Pipeline REGCONS
 
 # Control de Eventos: 
 on:
